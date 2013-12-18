@@ -1,0 +1,118 @@
+<html>
+	<head>
+		<link href="./lib/jquery-ui-1.10.3.min.css" rel="stylesheet" type="text/css">
+		<style type="text/css">
+			body {
+				font-family: “Calibri, Optima, Candara, Verdana, Geneva, sans-serif”;
+				font-size: 15px;
+				padding: 50px;
+			}
+			#chartContainer {
+				height: 100%;
+				width: 100%;
+			}
+			#error {
+				font-size: .8em;
+				color: red;
+			}
+			/* simplify jquery ui dialog */
+			.ui-dialog-titlebar {
+				display: none;
+				border: 5px solid red;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="formDialog">
+			<h5>Ardunio Temperature Sensor IP:</h5> 
+			<div id="error"></div>
+			<input id="ip" type="text" value="" />
+		</div>
+		<div id="chartContainer"></div>
+			
+		<script language="javascript" type="text/javascript" src="./lib/jquery.min.js"></script>
+		<script language="javascript" type="text/javascript" src="./lib/jquery-ui-1.10.3.min.js"></script>
+		<script language="javascript" type="text/javascript" src="./lib/canvasjs.min.js"></script>
+		<script>
+			$(document).ready(function(){
+				var dps = []; // dataPoints
+
+				var chart = new CanvasJS.Chart("chartContainer",{
+					title :{
+						text: "Live Temperature Data"
+					},			
+					data: [{
+						dataPoints: dps,
+						type: "line",
+						lineThickness: 5,
+						markerType: "none"
+					}],
+					theme: "theme2",
+					axisX: {
+						title: 'Time',
+						valueFormatString: "h:mm:ss tt",
+						gridThickness: 1,
+						interval: 15,
+						intervalType: 'second'
+					},
+					axisY: {	
+						title: 'Temperature (F)',
+						minimum: 40,
+						maximum: 104,
+						gridThickness: 1
+					}
+				});
+
+				var updateInterval = 500; // set a low update interval for demo purposes
+				var dataLength = 50; // number of dataPoints visible at any point
+				var dataUrl = "";
+
+				var updateChart = function (count) {
+					// count is number of times loop runs to generate random dataPoints.
+					count = count || 1;
+					
+					for (var j = 0; j < count; j++) {
+						$.get(dataUrl, function(data) {
+							dps.push({
+								x: new Date(),
+								y: (data && data.temperatureF)? parseFloat(data.temperatureF) : null
+							});
+						});	
+					}
+					if (dps.length > dataLength) {
+						dps.shift();				
+					}
+					chart.render();		
+
+				};
+
+				// start plotting data on form submit 
+				var onOk = function() {
+
+					var ip = $("#ip").val();
+					if (!ip) {
+						$("#error").text('Please provide a valid ip address.');
+						return;
+					} 	
+					
+					$("#formDialog").dialog('close');
+				
+					dataUrl = "http://" + $("#ip").val();
+
+					// update chart after specified time. 
+					setInterval(function(){updateChart()}, updateInterval); 
+				};
+
+				// initial page rendering 
+				$( "#formDialog" ).dialog({ 
+					modal: true, 
+					width: '300px',
+					buttons: [ { text: "Ok", click: onOk } ] 
+				});
+				$("#ip").focus();
+				chart.render();
+
+			});
+		</script>
+	</body>
+</html>
